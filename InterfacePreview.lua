@@ -31,7 +31,18 @@ function FN.PRE.add_preview_to_hud(contents)
    end
 end
 
--- Keybind: press "s" to calculate the score. There is no button, to keep the HUD short.
+function G.FUNCS.calculate_score_button()
+   FN.safe_call("calculate score button", FN.PRE.start_new_coroutine)
+end
+
+-- The button's row makes the HUD taller, pushing its top into the space above the blind box.
+-- andy-bot-balatro puts its streak bar there, so with that mod loaded only the keybind is offered.
+-- Checked when the HUD is built, because mods load in no fixed order.
+function FN.PRE.show_calculate_score_button()
+   return AndyBot == nil
+end
+
+-- Keybind: press "s" to calculate the score (same as clicking the button).
 FN.PRE.calculate_key = "s"
 local orig_key_press = Controller.key_press_update
 function Controller:key_press_update(key, dt)
@@ -48,21 +59,36 @@ function FN.PRE.on_key_press(self, key)
            G.STATE == G.STATES.DRAW_TO_HAND or
            G.STATE == G.STATES.PLAY_TAROT)
    then return end
-   FN.PRE.start_new_coroutine()
+   G.FUNCS.calculate_score_button()
 end
 
 function FN.PRE.get_preview_container()
-   -- The money row sits under the score. Its wrapper has no padding and the money text is small,
-   -- so the HUD only grows by the height of that one line of text.
+   -- The money row sits between score and button. Its wrapper has no padding and the money text is
+   -- small, so the HUD only grows by the height of that one line of text.
    local dollars_wrap = {n=G.UIT.R, config={id = "fn_pre_dollars_wrap", align = "cm"}, nodes={}}
    if G.SETTINGS.FN.preview_dollars then table.insert(dollars_wrap.nodes, FN.PRE.get_dollars_node()) end
 
+   local rows = {
+      {n=G.UIT.R, config={id = "fn_pre_score_wrap", align = "cm", padding = G.SETTINGS.FN.preview_dollars and 0.05 or 0.1}, nodes={
+         FN.PRE.get_score_node()
+      }},
+      dollars_wrap,
+   }
+   if FN.PRE.show_calculate_score_button() then
+      table.insert(rows, {n=G.UIT.R, config={id = "fn_calculate_score_button_wrap", align = "cm", padding = 0.1}, nodes={
+         FN.PRE.get_calculate_score_button()
+      }})
+   end
+
    return {n=G.UIT.R, config={id = "fn_preview_container", align = "cm"}, nodes={
-      {n=G.UIT.C, config={align = "cm"}, nodes={
-         {n=G.UIT.R, config={id = "fn_pre_score_wrap", align = "cm", padding = G.SETTINGS.FN.preview_dollars and 0.05 or 0.1}, nodes={
-            FN.PRE.get_score_node()
-         }},
-         dollars_wrap,
+      {n=G.UIT.C, config={align = "cm"}, nodes=rows}
+   }}
+end
+
+function FN.PRE.get_calculate_score_button()
+   return {n=G.UIT.C, config={id = "calculate_score_button", button = "calculate_score_button", align = "cm", minh = 0.42, padding = 0.05, r = 0.02, colour = G.C.RED, hover = true, shadow = true}, nodes={
+      {n=G.UIT.R, config={align = "cm"}, nodes={
+         {n=G.UIT.T, config={text = "  Calculate Score  ", colour = G.C.UI.TEXT_LIGHT, shadow = true, scale = 0.36}}
       }}
    }}
 end

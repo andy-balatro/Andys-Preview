@@ -18,7 +18,7 @@ The original had its money preview disabled in the code. This fork brings it bac
 
 ### Faster, on-demand simulation
 
-- The simulation runs only when you press `s`. The Calculate Score button is gone, which keeps the HUD shorter.
+- The simulation runs only when you click Calculate Score or press `s`. With andy-bot-balatro installed the button is hidden, so the HUD stays clear of its streak bar, and `s` is the way to run it.
 - The original re-ran the full simulation on every card selection, reorder, consumable use, and joker sale. Those actions now only hide the outdated preview.
 - The 5 second wait after asking for a preview is gone. The result shows immediately.
 - A per-discard reset that caused noticeable lag is removed.
