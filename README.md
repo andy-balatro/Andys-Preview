@@ -29,6 +29,8 @@ The original had its money preview disabled in the code. This fork brings it bac
 - **The Hook** now simulates exactly the discards the game makes. Mail-In Rebate, Trading Card, and Green Joker react to those discards, and state no longer leaks between simulated discards.
 - **Mail-In Rebate** and **Hit the Road** compared a card field that does not exist, so they never matched. They now check the rank correctly.
 - The simulation no longer changes the real blind's triggered flag.
+- **Midas Mask** and **Vampire** now remove the old enhancement's bonus chips when they change a card, as the game does. A Bonus Card turned Gold or Base no longer keeps its +30 chips, and a vampired Stone Card no longer scores its 50 chips on top of its rank.
+- Debuffed cards no longer count as face cards. Midas Mask skips them, and Photograph and Ride the Bus now match the game.
 
 ### Crash safety
 

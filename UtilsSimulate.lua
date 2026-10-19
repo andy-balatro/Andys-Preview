@@ -159,11 +159,21 @@ function FN.SIM.check_rank_parity(card_data, check_even)
 end
 
 function FN.SIM.is_face(card_data)
-   return (FN.SIM.is_rank(card_data, {11, 12, 13}) or next(find_joker("Pareidolia")))
+   -- See Card:is_face(), debuffed cards are never face cards:
+   if card_data.debuff then return false end
+   return (FN.SIM.is_rank(card_data, {11, 12, 13}) or next(find_joker("Pareidolia"))) and true or false
 end
 
 function FN.SIM.set_ability(card_data, center)
    -- See Card:set_ability()
+   -- The old enhancement's bonus chips are removed (eg. a Bonus or Stone Card turned Gold or Base):
+   local bonus = card_data.ability and card_data.ability.bonus or 0
+   local old_center = card_data.center_key and G.P_CENTERS[card_data.center_key]
+   if old_center and old_center.config.bonus then
+      bonus = bonus - old_center.config.bonus
+   end
+   card_data.center_key = center.key
+
    card_data.ability = {
       name = center.name,
       effect = center.effect,
@@ -184,7 +194,7 @@ function FN.SIM.set_ability(card_data, center)
       order = center.order or nil,
       forced_selection = card_data.ability and card_data.ability.forced_selection or nil,
       perma_bonus = card_data.ability and card_data.ability.perma_bonus or 0,
-      bonus = (card_data.ability and card_data.ability.bonus or 0) + (center.config.bonus or 0)
+      bonus = bonus + (center.config.bonus or 0)
    }
 end
 

@@ -151,6 +151,7 @@ if not FN.SIM.run then
          rank = card_obj.base.id,
          suit = card_obj.base.suit,
          base_chips = card_obj.base.nominal,
+         center_key = card_obj.config.center.key, -- Needed by FN.SIM.set_ability(..)
          ability = copy_table(card_obj.ability),
          edition = copy_table(card_obj.edition),
          seal = card_obj.seal,
