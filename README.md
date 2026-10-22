@@ -14,12 +14,18 @@ The original had its money preview disabled in the code. This fork brings it bac
 - It shows a single value like `+$3`, or a `min - max` range when the result depends on chance.
 - Gains are coloured gold, losses red, and no change grey.
 - The HUD stays the same height. The room comes from trimming empty space around the hand name.
-- It can be turned off in the mod settings.
+- It can be turned off in the mod's settings.
+
+### Settings menu
+
+- The original's settings page was never reachable. It now opens from an "Andys Preview" button in the options menu, next to Settings and Collection.
+- It toggles the score preview, the money preview, hiding the preview when a card is face-down, and the Calculate Score button.
+- Changes show on the HUD right away, also in the middle of a run.
 
 ### Faster, on-demand simulation
 
 - The simulation runs only when you click Calculate Score or press `s`.
-- Turn the button off with "Show Calculate Score Button" in the Game tab of the settings. That keeps the HUD shorter, so it stays clear of anything other mods draw above the blind box, and `s` still works. With andy-bot-balatro installed the button starts out off, so the HUD stays clear of its streak bar.
+- The button can be turned off in the mod's settings. That keeps the HUD shorter, so it stays clear of anything other mods draw above the blind box, and `s` still works. With andy-bot-balatro installed the button starts out off, so the HUD stays clear of its streak bar.
 - The original re-ran the full simulation on every card selection, reorder, consumable use, and joker sale. Those actions now only hide the outdated preview.
 - The 5 second wait after asking for a preview is gone. The result shows immediately.
 - A per-discard reset that caused noticeable lag is removed.

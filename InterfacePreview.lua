@@ -22,12 +22,24 @@ function FN.PRE.add_preview_to_hud(contents)
    table.insert(rows, preview_container)
 
    -- The HUD already reaches the bottom edge of the screen, so the money row must not make it taller.
-   -- Make room by trimming the (mostly empty) row that shows the name of the selected poker hand:
+   -- Make room by trimming the (mostly empty) row that shows the name of the selected poker hand.
+   -- The HUD keeps using this config table, so the money toggle can change the trim later on:
+   local hand_name_row = rows[1]
+   FN.PRE.hand_name_row_config = nil
+   if type(hand_name_row) == "table" and type(hand_name_row.config) == "table" and type(hand_name_row.config.minh) == "number" then
+      FN.PRE.hand_name_row_config = hand_name_row.config
+      FN.PRE.hand_name_row_minh = hand_name_row.config.minh
+      FN.PRE.trim_hand_name_row()
+   end
+end
+
+function FN.PRE.trim_hand_name_row()
+   local config = FN.PRE.hand_name_row_config
+   if not config then return end
    if G.SETTINGS.FN.preview_dollars then
-      local hand_name_row = rows[1]
-      if type(hand_name_row) == "table" and type(hand_name_row.config) == "table" and type(hand_name_row.config.minh) == "number" then
-         hand_name_row.config.minh = math.max(0.6, hand_name_row.config.minh - FN.PRE.dollars_row_height)
-      end
+      config.minh = math.max(0.6, FN.PRE.hand_name_row_minh - FN.PRE.dollars_row_height)
+   else
+      config.minh = FN.PRE.hand_name_row_minh
    end
 end
 
@@ -68,7 +80,7 @@ function FN.PRE.get_preview_container()
    return {n=G.UIT.R, config={id = "fn_preview_container", align = "cm"}, nodes={
       {n=G.UIT.C, config={align = "cm"}, nodes={
          {n=G.UIT.R, config={id = "fn_pre_score_wrap", align = "cm", padding = G.SETTINGS.FN.preview_dollars and 0.05 or 0.1}, nodes={
-            FN.PRE.get_score_node()
+            G.SETTINGS.FN.preview_score and FN.PRE.get_score_node() or nil
          }},
          dollars_wrap,
          button_wrap,
@@ -84,27 +96,6 @@ function FN.PRE.get_calculate_score_button()
          }}
       }}
    }}
-end
-
--- The "Show Calculate Score Button" toggle in the game's settings (added by lovely.toml).
--- The button's row makes the HUD taller, pushing its top into the space above the blind box,
--- where other mods (like andy-bot-balatro's streak bar) may draw. Hiding it leaves the "s" key.
-function FN.PRE.calculate_button_toggle_callback(show)
-   FN.safe_call("calculate score button toggle", FN.PRE.update_calculate_score_button, show)
-end
-
-function FN.PRE.update_calculate_score_button(show)
-   if not G.HUD then return end
-   local wrap = G.HUD:get_UIE_by_ID("fn_calculate_score_button_wrap")
-   if not wrap then return end
-
-   -- Removing an element doesn't unlink it from its parent, so clear the wrapper's children directly:
-   remove_all(wrap.children)
-   wrap.children = {}
-   if show then
-      G.HUD:add_child(FN.PRE.get_calculate_score_button(), wrap)
-   end
-   G.HUD:recalculate()
 end
 
 
@@ -149,57 +140,85 @@ end
 -- SETTINGS:
 --
 
+-- An "Andys Preview" button in the options menu, next to Settings and Collection, opens the settings page:
+local orig_options = create_UIBox_options
+function create_UIBox_options()
+   local contents = orig_options()
+   FN.safe_call("options menu button", FN.PRE.add_options_button, contents)
+   return contents
+end
+
+function FN.PRE.add_options_button(contents)
+   local button = UIBox_button({label = {"Andys Preview"}, button = "fn_preview_options", minw = 5, colour = G.C.ORANGE})
+   local buttons = contents.nodes[1].nodes[1].nodes[1].nodes
+   -- Some of the menu's buttons only exist in a run, which leaves gaps in the list, so add after the last one:
+   table.insert(buttons, table.maxn(buttons) + 1, button)
+end
+
+function G.FUNCS.fn_preview_options(e)
+   G.SETTINGS.paused = true
+   G.FUNCS.overlay_menu{
+      definition = create_UIBox_generic_options({back_func = "options", contents = {FN.get_preview_settings_page()}}),
+   }
+end
+
+-- Puts `node` (or nothing) into the HUD element `wrap_id`, while a run is going.
+-- Removing an element doesn't unlink it from its parent, so the wrapper's children are cleared directly.
+function FN.PRE.refill_hud_wrap(wrap_id, node)
+   if not G.HUD then return end
+   local wrap = G.HUD:get_UIE_by_ID(wrap_id)
+   if not wrap then return end
+
+   remove_all(wrap.children)
+   wrap.children = {}
+   if node then G.HUD:add_child(node, wrap) end
+   G.HUD:recalculate()
+end
+
 function FN.get_preview_settings_page()
-   local function preview_score_toggle_callback(e)
-      if not G.HUD then return end
-
-      if G.SETTINGS.FN.preview_score then
-         -- Preview was just enabled, so add preview node:
-         G.HUD:add_child(FN.PRE.get_score_node(), G.HUD:get_UIE_by_ID("fn_pre_score_wrap"))
-         FN.PRE.data = FN.PRE.simulate()
-      else
-         -- Preview was just disabled, so remove preview node:
-         G.HUD:get_UIE_by_ID("fn_pre_score").parent:remove()
-      end
-      G.HUD:recalculate()
+   -- Toggling a preview only shows or hides its text. The last result already holds both score and money.
+   local function preview_score_toggle_callback(show)
+      FN.safe_call("score preview toggle", FN.PRE.refill_hud_wrap, "fn_pre_score_wrap", show and FN.PRE.get_score_node() or nil)
    end
 
-   local function preview_dollars_toggle_callback(_)
-      if not G.HUD then return end
-
-      if G.SETTINGS.FN.preview_dollars then
-         -- Preview was just enabled, so add preview node:
-         G.HUD:add_child(FN.PRE.get_dollars_node(), G.HUD:get_UIE_by_ID("fn_pre_dollars_wrap"))
-         FN.PRE.data = FN.PRE.simulate()
-      else
-         -- Preview was just disabled, so remove preview node:
-         G.HUD:get_UIE_by_ID("fn_pre_dollars").parent:remove()
-      end
-      G.HUD:recalculate()
+   local function preview_dollars_toggle_callback(show)
+      FN.safe_call("money preview toggle", function()
+         -- Same room-making as when the HUD is built, see FN.PRE.add_preview_to_hud(..):
+         FN.PRE.trim_hand_name_row()
+         local score_wrap = G.HUD and G.HUD:get_UIE_by_ID("fn_pre_score_wrap")
+         if score_wrap then score_wrap.config.padding = show and 0.05 or 0.1 end
+         FN.PRE.refill_hud_wrap("fn_pre_dollars_wrap", show and FN.PRE.get_dollars_node() or nil)
+      end)
    end
 
+   -- The last result may not match the new setting anymore, so hide it until the next calculation:
    local function face_down_toggle_callback(_)
-      if not G.HUD then return end
+      FN.PRE.invalidate()
+   end
 
-      FN.PRE.data = FN.PRE.simulate()
-      G.HUD:recalculate()
+   -- The button's row makes the HUD taller, pushing its top into the space above the blind box,
+   -- where other mods (like andy-bot-balatro's streak bar) may draw. Hiding it leaves the "s" key.
+   local function calculate_button_toggle_callback(show)
+      FN.safe_call("calculate score button toggle", FN.PRE.refill_hud_wrap, "fn_calculate_score_button_wrap", show and FN.PRE.get_calculate_score_button() or nil)
    end
 
    return
-      {n=G.UIT.ROOT, config={align = "cm", padding = 0.05, colour = G.C.CLEAR}, nodes={
-          create_toggle({id = "score_toggle",
-                         label = "Enable Score Preview",
+      {n=G.UIT.C, config={align = "cm", padding = 0.05}, nodes={
+          create_toggle({label = "Enable Score Preview",
                          ref_table = G.SETTINGS.FN,
                          ref_value = "preview_score",
                          callback = preview_score_toggle_callback}),
-          create_toggle({id = "dollars_toggle",
-                         label = "Enable Money Preview",
+          create_toggle({label = "Enable Money Preview",
                          ref_table = G.SETTINGS.FN,
                          ref_value = "preview_dollars",
                          callback = preview_dollars_toggle_callback}),
           create_toggle({label = "Hide Preview if Any Card is Face-Down",
                          ref_table = G.SETTINGS.FN,
                          ref_value = "hide_face_down",
-                         callback = face_down_toggle_callback})
+                         callback = face_down_toggle_callback}),
+          create_toggle({label = "Show Calculate Score Button",
+                         ref_table = G.SETTINGS.FN,
+                         ref_value = "show_calculate_button",
+                         callback = calculate_button_toggle_callback}),
       }}
 end
