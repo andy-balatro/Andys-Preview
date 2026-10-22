@@ -48,3 +48,14 @@ sources = [
 target = "functions/UI_definitions.lua"
 position = "append"
 sources = [ "InterfacePreview.lua" ]
+
+# Toggle for the Calculate Score button in the Game tab of the settings menu.
+[[patches]]
+[patches.pattern]
+target = "functions/UI_definitions.lua"
+pattern = "G.F_CRASH_REPORTS and create_toggle({label = localize('b_set_crash_reports'), ref_table = G.SETTINGS, ref_value = 'crashreports', info = localize('ml_crash_report_info')}) or nil,"
+position = "before"
+payload = '''
+FN and FN.PRE and G.SETTINGS.FN and create_toggle({label = "Show Calculate Score Button", ref_table = G.SETTINGS.FN, ref_value = 'show_calculate_button', callback = FN.PRE.calculate_button_toggle_callback}) or nil,
+'''
+match_indent = true

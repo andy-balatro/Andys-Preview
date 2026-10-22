@@ -42,5 +42,11 @@ function Game:start_up()
       G.SETTINGS.FN.hide_face_down = true
       G.SETTINGS.FN.show_min_max = true
    end
+   -- Added later, so it gets its own check for players who already have settings saved.
+   -- andy-bot-balatro draws a streak bar where the button's row would grow the HUD into,
+   -- so the button starts out hidden when that mod is loaded.
+   if G.SETTINGS.FN.show_calculate_button == nil then
+      G.SETTINGS.FN.show_calculate_button = (AndyBot == nil)
+   end
 
 end
