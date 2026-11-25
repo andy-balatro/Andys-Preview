@@ -19,8 +19,19 @@ The original had its money preview disabled in the code. This fork brings it bac
 ### Settings menu
 
 - The original's settings page was never reachable. It now opens from an "Andys Preview" button in the options menu, next to Settings and Collection.
-- It toggles the score preview, the money preview, hiding the preview when a card is face-down, and the Calculate Score button.
+- It toggles the score preview, the money preview, and the Calculate Score button.
 - Changes show on the HUD right away, also in the middle of a run.
+
+### Face-down cards and jokers
+
+The original used what face-down cards really were. With Baron, for example, you could find out which face-down cards are Kings. The preview now only uses what you can see.
+
+- A face-down card could be any card still in the deck, or any of the face-down cards. The preview shows the range over all of those. The game's deck view counts face-down cards as still in the deck, so that is exactly what you can know.
+- Under The Mark, face-down cards are only face cards.
+- This works for held and played face-down cards. For played ones, the poker hand itself can change.
+- Face-down jokers (Amber Acorn) now show a range instead of `??????`. You know which jokers you have, but not their order, so the range covers every order.
+- When there are too many possibilities to try them all, such as a whole face-down hand under The House, a search looks for the lowest and highest results. The range is then a close estimate.
+- The setting to hide the preview when a card is face-down is gone, since nothing hidden is used anymore.
 
 ### Faster, on-demand simulation
 

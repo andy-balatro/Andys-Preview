@@ -19,9 +19,26 @@ if not FN.SIM.run then
       local null_ret = {score = {min=0, exact=0, max=0}, dollars = {min=0, exact=0, max=0}}
       if #G.hand.highlighted < 1 then return null_ret end
 
-      FN.SIM.init()
+      -- Sorts by positional x-value to mirror card order!
+      table.sort(G.hand.highlighted, function(a, b) return a.T.x < b.T.x end)
 
       FN.SIM.manage_state("SAVE")
+      -- Face-down cards and jokers are simulated as everything they could be, see HiddenSimulate.lua:
+      local results = FN.SIM.simulate_all_scenarios()
+      FN.SIM.manage_state("RESTORE")
+
+      return results
+   end
+
+   -- Simulates the hand for one scenario, ie. one way the face-down cards and jokers could turn out.
+   -- `scenario` is nil when nothing is face-down. Otherwise:
+   --   scenario.cards:  maps each face-down card in hand to the card it is simulated as
+   --   scenario.jokers: all jokers, in the order they are simulated in
+   function FN.SIM.simulate_scenario(scenario)
+      -- Every scenario starts from the same game state:
+      FN.SIM.manage_state("RESET")
+
+      FN.SIM.init(scenario)
       FN.SIM.update_state_variables()
 
       if FN.SIM.is_hook_active() then
@@ -32,8 +49,6 @@ if not FN.SIM.run then
       else -- Only Matador at this point:
          FN.SIM.simulate_all_jokers(G.jokers, {debuffed_hand = true})
       end
-
-      FN.SIM.manage_state("RESTORE")
 
       return FN.SIM.get_results()
    end
@@ -59,13 +74,21 @@ if not FN.SIM.run then
       }
    end
 
-   function FN.SIM.init()
+   function FN.SIM.init(scenario)
       -- Reset:
       FN.SIM.reset_running()
       FN.SIM.misc.blind_triggered = false
 
+      -- A face-down card is simulated as the card the scenario says it is:
+      local stand_ins = scenario and scenario.cards or {}
+      local played_objs = {}
+      for i, card in ipairs(G.hand.highlighted) do
+         played_objs[i] = stand_ins[card] or card
+      end
+      FN.SIM.env.played_objs = played_objs
+
       -- Fetch metadata about simulated play:
-      local hand_name, _, poker_hands, scoring_hand, _ = G.FUNCS.get_poker_hand_info(G.hand.highlighted)
+      local hand_name, poker_hands, scoring_hand = FN.SIM.get_poker_hand_info(played_objs)
       FN.SIM.env.scoring_name = hand_name
       FN.SIM.env.poker_hands = poker_hands
 
@@ -73,8 +96,7 @@ if not FN.SIM.run then
       FN.SIM.env.played_cards = {}
       FN.SIM.env.scoring_cards = {}
       local is_splash_joker = next(find_joker("Splash"))
-      table.sort(G.hand.highlighted, function(a, b) return a.T.x < b.T.x end) -- Sorts by positional x-value to mirror card order!
-      for _, card in ipairs(G.hand.highlighted) do
+      for _, card in ipairs(played_objs) do
          local is_scoring = false
          for _, scoring_card in ipairs(scoring_hand) do
          -- Either card is scoring because it's part of the scoring hand,
@@ -98,14 +120,14 @@ if not FN.SIM.run then
       for _, card in ipairs(G.hand.cards) do
          -- Highlighted cards are simulated as played cards:
          if not card.highlighted then
-            local card_data = FN.SIM.get_card_data(card)
+            local card_data = FN.SIM.get_card_data(stand_ins[card] or card)
             table.insert(FN.SIM.env.held_cards, card_data)
          end
       end
 
       -- Extract necessary joker data:
       FN.SIM.env.jokers = {}
-      for _, joker in ipairs(G.jokers.cards) do
+      for _, joker in ipairs(scenario and scenario.jokers or G.jokers.cards) do
          local joker_data = {
             -- P_CENTER keys for jokers have the form j_NAME, get rid of j_
             id = joker.config.center.key:sub(3, #joker.config.center.key),
@@ -144,6 +166,22 @@ if not FN.SIM.run then
 
          return context
       end
+   end
+
+   -- Same as G.FUNCS.get_poker_hand_info(..), but remembers results during one simulation run,
+   -- because many scenarios only differ in held cards and jokers, so they play the same cards.
+   function FN.SIM.get_poker_hand_info(cards)
+      local ids = {}
+      for i, card in ipairs(cards) do ids[i] = tostring(card.sort_id) end
+      local key = table.concat(ids, ",")
+
+      local cache = FN.SIM.hand_info_cache
+      local hit = cache and cache[key]
+      if hit then return hit[1], hit[2], hit[3] end
+
+      local hand_name, _, poker_hands, scoring_hand, _ = G.FUNCS.get_poker_hand_info(cards)
+      if cache then cache[key] = {hand_name, poker_hands, scoring_hand} end
+      return hand_name, poker_hands, scoring_hand
    end
 
    function FN.SIM.get_card_data(card_obj)
@@ -185,6 +223,14 @@ if not FN.SIM.run then
          FNSO.hand_data = copy_table(G.GAME.hands)
          FNSO.blind_triggered = G.GAME.blind.triggered
          FNSO.is_saved = true
+         return
+      end
+
+      -- Puts fresh copies of the saved state in place, so that one scenario cannot affect the next:
+      if save_or_restore == "RESET" then
+         G.GAME.pseudorandom = copy_table(FNSO.random_data)
+         G.GAME.hands = copy_table(FNSO.hand_data)
+         G.GAME.blind.triggered = FNSO.blind_triggered
          return
       end
 
@@ -343,7 +389,7 @@ if not FN.SIM.run then
 
       -- Blind:debuff_hand(..) sets the blind's triggered flag as a side effect, even when only checking.
       -- NOTE: The real flag is put back by FN.SIM.manage_state("RESTORE")
-      local is_debuffed = blind_obj:debuff_hand(G.hand.highlighted, FN.SIM.env.poker_hands, FN.SIM.env.scoring_name, true)
+      local is_debuffed = blind_obj:debuff_hand(FN.SIM.env.played_objs, FN.SIM.env.poker_hands, FN.SIM.env.scoring_name, true)
       FN.SIM.misc.blind_triggered = (blind_obj.triggered and true) or false
 
       return is_debuffed

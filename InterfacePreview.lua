@@ -191,11 +191,6 @@ function FN.get_preview_settings_page()
       end)
    end
 
-   -- The last result may not match the new setting anymore, so hide it until the next calculation:
-   local function face_down_toggle_callback(_)
-      FN.PRE.invalidate()
-   end
-
    -- The button's row makes the HUD taller, pushing its top into the space above the blind box,
    -- where other mods (like andy-bot-balatro's streak bar) may draw. Hiding it leaves the "s" key.
    local function calculate_button_toggle_callback(show)
@@ -212,10 +207,6 @@ function FN.get_preview_settings_page()
                          ref_table = G.SETTINGS.FN,
                          ref_value = "preview_dollars",
                          callback = preview_dollars_toggle_callback}),
-          create_toggle({label = "Hide Preview if Any Card is Face-Down",
-                         ref_table = G.SETTINGS.FN,
-                         ref_value = "hide_face_down",
-                         callback = face_down_toggle_callback}),
           create_toggle({label = "Show Calculate Score Button",
                          ref_table = G.SETTINGS.FN,
                          ref_value = "show_calculate_button",

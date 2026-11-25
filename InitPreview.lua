@@ -39,7 +39,6 @@ function Game:start_up()
 
       G.SETTINGS.FN.preview_score = true
       G.SETTINGS.FN.preview_dollars = true
-      G.SETTINGS.FN.hide_face_down = true
       G.SETTINGS.FN.show_min_max = true
    end
    -- Added later, so it gets its own check for players who already have settings saved.

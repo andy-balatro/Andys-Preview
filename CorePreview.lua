@@ -23,17 +23,8 @@ function FN.PRE.simulate()
    then return {score = {min = 0, exact = 0, max = 0}, dollars = {min = 0, exact = 0, max = 0}}
    end
 
-   if G.SETTINGS.FN.hide_face_down then
-      for _, card in ipairs(G.hand.highlighted) do
-         if card.facing == "back" then return nil end
-      end
-      if #(G.hand.highlighted) ~= 0 then
-        for _, joker in ipairs(G.jokers.cards) do
-          if joker.facing == "back" then return nil end
-        end
-      end
-   end
-
+   -- NOTE: Face-down cards and jokers are simulated as everything they could be (see HiddenSimulate.lua),
+   --       so the preview never tells the player more than they can see.
    return FN.SIM.run()
 end
 
@@ -288,7 +279,7 @@ function FN.PRE.dollars_UI_set(e)
          end
       end
    else
-      -- Simulation was refused (eg. face-down cards), same as ' ?????? ' for score:
+      -- Simulation failed, same as ' ?????? ' for score:
       if is_left then new_preview_text = " " .. localize('$') .. "?? " end
    end
 
